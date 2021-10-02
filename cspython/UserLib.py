@@ -10,6 +10,9 @@ UserLib
         Creates message structure with username, message content, and ID
         Validate message content
         Convert message object into string
+    
+    -Contains Enum MessageType
+        Represents message type of either content or response
 '''
 
 class User:
@@ -32,8 +35,8 @@ class Message:
         self.messageID = None
         self.messageType = None
 
-    def setSendingUser(self, user):
-        self.sendingUsername = user.username
+    def setSendingUser(self, username):
+        self.sendingUsername = username
 
     def setMessageContent(self, messageContent):
         self.messageContent = messageContent
@@ -54,11 +57,14 @@ class Message:
     def BuildMessageObjectAsString(self):
         #Converts the message object to sendable string
         #Format: msgType\x88username\x88msgContent\x88msgID
-        msgString = str(self.messageType.name)+'\x88'+str(self.messageID)
+        msgString = str(self.messageType.name)+'\xAA'+str(self.messageID)
         if self.messageType==MessageType.CONTENT:
-            msgString += "\x88"+self.sendingUsername+'\x88'+self.messageContent
+            msgString += "\xAA"+self.sendingUsername+'\xAA'+self.messageContent
        
         return msgString
+
+    def __repr__(self):
+        return f"{self.sendingUsername}: {self.messageContent}" 
 
 class MessageType(Enum):
     CONTENT = 1

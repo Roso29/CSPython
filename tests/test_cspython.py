@@ -10,7 +10,7 @@ def test_initMessage():
 def test_setSendingUserForMessage():
     user = User(username="James")
     msg = Message()
-    msg.setSendingUser(user)
+    msg.setSendingUser(user.username)
     assert msg.sendingUsername == "James"
 
 def test_setMessageContent():
@@ -33,19 +33,19 @@ def test_buildInValidMessage():
 def test_ConvertMessageObjToString():
     msg = Message()
     user = User(username="James")
-    msg.setSendingUser(user)
+    msg.setSendingUser(user.username)
     msg.setMessageContent("Hello, how are you?")
     msg.setMessageID(123)
     msg.setMessageType(MessageType.CONTENT)
     msgString = msg.BuildMessageObjectAsString()
-    assert msgString=="CONTENT\x88123\x88James\x88Hello, how are you?"
+    assert msgString=="CONTENT\xAA123\xAAJames\xAAHello, how are you?"
 
 def test_ConvertAnotherMessageObjToString():
     msg = Message()
     user = User(username="Jack")
-    msg.setSendingUser(user)
+    msg.setSendingUser(user.username)
     msg.setMessageContent("Hello, I am Jack!")
     msg.setMessageID(236)
     msg.setMessageType(MessageType.CONTENT)
     msgString = msg.BuildMessageObjectAsString()
-    assert msgString=="CONTENT\x88236\x88Jack\x88Hello, I am Jack!"
+    assert msgString=="CONTENT\xAA236\xAAJack\xAAHello, I am Jack!"
