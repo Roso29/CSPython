@@ -1,36 +1,61 @@
 import curses
+from cspython.UserLib import MessageType
 
 class UserInterface:
 	def __init__(self):
 		self.screen = curses.initscr()
+		curses.noecho()
 		self.num_of_rows, self.num_cols = self.screen.getmaxyx()
-		curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
 
 	def RenderMessages(self, messageHistory):
 		for row, message in enumerate(messageHistory[-self.num_of_rows+5:]):
-			self.screen.addstr(row,0,message,curses.color_pair(1))
+			if message.messageType == MessageType.EXIT:
+				outputString = f"{message.sendingUsername} has left the chat."
+			else:
+				outputString = f"{message.sendingUsername}: {message.messageContent}"
+			self.screen.addstr(row,0,outputString)
 			self.screen.clrtoeol()
 		self.screen.refresh()
 
+	def DisplayUserDisconnectMessage(self):
+		self.screen.addstr(self.num_of_rows-4,0,"You are the only user in this chat.")
+		self.screen.refresh()
+
+	def RenderInputPromptInfo(self,chars_typed,maximum_chars,message,input_prompt):
+		self.screen.addstr(self.num_of_rows-3,0,f"[{chars_typed}/{maximum_chars}]")
+		self.screen.addstr(self.num_of_rows-1,0,input_prompt)
+		self.screen.clrtoeol()
+		self.screen.addstr(self.num_of_rows-1,len(input_prompt)+1,message)
+		
+
 	def GetInput(self):
+		chars_typed = 0
+		maximum_chars = 100
 		message = ''
 		message_sent = False
+		input_prompt=">>>"
 		while True:
-			self.screen.addstr(self.num_of_rows-1,0,"INPUT")
-			self.screen.clrtoeol()
-			self.screen.addstr(message)
+			self.RenderInputPromptInfo(chars_typed,maximum_chars,message,input_prompt)
+			
 			if message_sent:
-				self.screen.addstr(self.num_of_rows-1,0,"INPUT")
+				self.screen.addstr(self.num_of_rows-1,0,input_prompt)
 				self.screen.clrtoeol()
 				return message
+
 			char = self.screen.get_wch()
 			if isinstance(char, str) and char.isprintable():
-				message+=char
-			elif char == '\x7f':
+				if chars_typed<maximum_chars:
+					chars_typed+=1
+					message+=char
+			elif char == '\b':
 				message = message[:-1]
+				if chars_typed>0:
+					chars_typed-=1
 			elif char =='\n':
 				message_sent = True
 
+	def Teardown(self):
+		curses.endwin()
 '''
 import curses, time, threading
 

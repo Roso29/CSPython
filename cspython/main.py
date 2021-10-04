@@ -7,4 +7,4 @@ if __name__ == '__main__':
         print("If not hosting a server, a server address must be connected to.")
         exit()
     chatSystem = System(args.hosting, args.port, args.server_addr, args.username)
-    chatSystem.SimpleSystemLoop()
+    chatSystem.StartChatThreads()

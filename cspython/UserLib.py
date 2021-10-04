@@ -22,9 +22,8 @@ class User:
     def __repr__(self):
         return self.username
 
-    def GetMessageContent(self):
-        print(f"{self.username}:",end='')
-        message = input()
+    def GetMessageContent(self, ui):
+        message = ui.GetInput()
         return message
 
 
@@ -57,9 +56,9 @@ class Message:
     def BuildMessageObjectAsString(self):
         #Converts the message object to sendable string
         #Format: msgType\x88username\x88msgContent\x88msgID
-        msgString = str(self.messageType.name)+'\xAA'+str(self.messageID)
+        msgString = str(self.messageType.name)+'\xAA'+str(self.messageID)+"\xAA"+self.sendingUsername
         if self.messageType==MessageType.CONTENT:
-            msgString += "\xAA"+self.sendingUsername+'\xAA'+self.messageContent
+            msgString +='\xAA'+self.messageContent
        
         return msgString
 
@@ -69,3 +68,4 @@ class Message:
 class MessageType(Enum):
     CONTENT = 1
     RESPONSE = 2
+    EXIT = 3

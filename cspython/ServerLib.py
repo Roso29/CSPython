@@ -13,12 +13,13 @@ class Server:
         self.port = port
         self.bytesToRecv = 1024
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
+    
 
 class Host(Server):
     def __init__(self, port):
         super().__init__(port)
         self.SetUpSocket()
+        self.hasActiveClient = False
 
     def SetUpSocket(self):
         numberOfClients = 1
@@ -37,6 +38,8 @@ class Host(Server):
         receivedMessageString = receivedMessageBytes.decode("utf-8")
         return receivedMessageString    
 
+    def TeardownSocket(self):
+        self.clientSocket.close()
 
 class Client(Server):
     def __init__(self, port, hostAddress):

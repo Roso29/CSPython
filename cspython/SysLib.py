@@ -1,6 +1,9 @@
 from cspython.UserLib import User, Message, MessageType
 from cspython.ServerLib import Host, Client
+from cspython.UIHandler import UserInterface
 from os import system
+import threading
+import sys
 
 '''
 SysLib
@@ -18,6 +21,9 @@ class System:
         self.isHosting = isHosting
         self.CreateUser(username)
         self.SetUpServer(isHosting, port, clientAddr)
+        self.ui = UserInterface()
+        self.currentMessageID = 0
+        self.hasActiveConnection = True
 
     def CreateUser(self,username):
         if username=='':
@@ -51,61 +57,78 @@ class System:
         msgObj.setMessageType(MessageType.CONTENT)
         return msgObj
 
-    def BuildResponseMessage(self, ID):
+    def BuildUtilityMessage(self, user, ID, messageType):
         msgObj = Message()
+        msgObj.setSendingUser(user)
         msgObj.setMessageID(ID)
-        msgObj.setMessageType(MessageType.CONTENT)
+        msgObj.setMessageType(messageType)
         return msgObj
 
-    def ParseMessageItems(self, messageString):
-        messageItems = messageItems = messageString.split('\xAA')
-        messageObject = None
-        if messageItems[0] == 'CONTENT':
-            messageObject = self.BuildContentMessage(user = messageItems[2], content = messageItems[3], ID = messageItems[1])
-        elif messageItems[0] == 'RESPONSE':
-            messageObject = self.BuildResponseMessage(ID = messageItems[1])
+    def BuildMessageObject(self, user, ID, messageType, content=None):
+        if messageType == MessageType.CONTENT:
+            messageObject = self.BuildContentMessage(user, content, ID)
+        else:
+            messageObject = self.BuildUtilityMessage(user, ID, messageType)
         return messageObject
 
-    def ConstructMessageHistoryString(self):
-        historyString = ''
-        for message in self.messageHistory[-50:]:
-            historyString+=str(message)
-            historyString+='\n'
-        return historyString[:-1]
+    def ParseMessageItems(self, messageString):
+        print(messageString+"!!!!!!")
+        messageItems = messageString.split('\xAA')
+        messageObject = None
+        messageID = messageItems[1]
+        typeAsString = messageItems[0]
+        if messageItems[0] == 'CONTENT':
+            messageObject = self.BuildContentMessage(user = messageItems[2], content = messageItems[3], ID = messageID)
+        else:
+            messageObject = self.BuildUtilityMessage(user = messageItems[2], ID = messageID ,messageType=MessageType[typeAsString])
+        return messageObject
 
-    def RefreshScreen(self):
-        system('clear')
-        history = self.ConstructMessageHistoryString()
-        print(history)
+    def RenderScreen(self):
+        self.ui.RenderMessages(self.messageHistory)
+
+    def HandleOutgoingMessageLoop(self):
+        while True:
+            outgoingMessage = self.user.GetMessageContent(self.ui)
+            if outgoingMessage == '$EXIT$':
+                outgoingMessageObject = self.BuildMessageObject(self.user.username, self.currentMessageID, MessageType.EXIT)
+            else:
+                outgoingMessageObject = self.BuildMessageObject(self.user.username, self.currentMessageID, MessageType.CONTENT, outgoingMessage)
+
+            self.currentMessageID+=1
+            if self.hasActiveConnection:
+                self.SendMessage(outgoingMessageObject)
+            self.messageHistory.append(outgoingMessageObject)
+            self.RenderScreen()
+            if outgoingMessage == "$EXIT$":
+                self.Teardown()
+                self.ui.Teardown()
+                break
+
+    def HandleIncomingMessageLoop(self):
+        while True:
+            incomingMessageString = self.ReceiveMessage()
+            if incomingMessageString=='':
+                break
+            receivedMessageObject = self.ParseMessageItems(incomingMessageString)
+            self.messageHistory.append(receivedMessageObject)
+            self.RenderScreen()
+            if receivedMessageObject.messageType == MessageType.EXIT:
+                self.ui.DisplayUserDisconnectMessage()
+                self.Teardown()
+                break
+
+    def StartChatThreads(self):
+        self.outgoingMessageThread = threading.Thread(target=self.HandleOutgoingMessageLoop)
+        self.incomingMessageThread = threading.Thread(target=self.HandleIncomingMessageLoop)
+        self.outgoingMessageThread.start()
+        self.incomingMessageThread.start()
         
 
-    def SimpleSystemLoop(self):
-        #If hosting, start by sending a message, then receive a message, and repeat
-        self.RefreshScreen()
+    def Teardown(self):
+        self.hasActiveConnection = False
         if self.isHosting:
-            while True:
-                messageContent = self.user.GetMessageContent()
-                messageObject = self.BuildContentMessage(self.user.username, messageContent, '1')
-                self.SendMessage(messageObject)
-                self.messageHistory.append(messageObject)
-                self.RefreshScreen()
-                recvMsg = self.ReceiveMessage()
-                recvMsgObj = self.ParseMessageItems(recvMsg)
-                self.messageHistory.append(recvMsgObj)
-                self.RefreshScreen()
-        else:
-            while True:
-                recvMsg = self.ReceiveMessage()
-                recvMsgObj = self.ParseMessageItems(recvMsg)
-                self.messageHistory.append(recvMsgObj)
-                self.RefreshScreen()
-                messageContent = self.user.GetMessageContent()
-                messageObject = self.BuildContentMessage(self.user.username, messageContent, '1')
-                self.SendMessage(messageObject)
-                self.messageHistory.append(messageObject)
-                self.RefreshScreen()
-
-
+            self.server.TeardownSocket()
+        sys.exit()
 
     #Sending
         #Get message from user
