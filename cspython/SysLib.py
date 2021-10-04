@@ -72,7 +72,6 @@ class System:
         return messageObject
 
     def ParseMessageItems(self, messageString):
-        print(messageString+"!!!!!!")
         messageItems = messageString.split('\xAA')
         messageObject = None
         messageID = messageItems[1]
